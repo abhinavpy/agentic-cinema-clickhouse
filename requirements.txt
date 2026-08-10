@@ -1,0 +1,7 @@
+google-genai>=1.0.0
+mcp
+mcp-clickhouse
+clickhouse-connect
+python-dotenv
+streamlit
+pandas

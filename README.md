@@ -1,0 +1,69 @@
+# Cutting Room Copilot
+
+An audience-analytics agent for a streaming studio's editorial team. Ask it
+things like *"Where do viewers drop off in episode 3, and what should we cut?"*
+— it queries real viewing-event data in **ClickHouse Cloud** via the official
+`mcp-clickhouse` MCP server, reasons over the results with **Gemini Enterprise
+Agent Platform**, and returns a grounded, actionable recommendation.
+
+Built for the [Agentic Cinema hackathon](https://agentic-cinema.devpost.com/) — ClickHouse partner track.
+
+## Architecture
+
+1. **Data**: synthetic viewer-event stream for a fictional series, loaded into
+   a ClickHouse Cloud `MergeTree` table (`agentic_cinema.viewing_events`).
+2. **Tooling**: Gemini connects to ClickHouse through the official
+   `mcp-clickhouse` MCP server (read-only queries) and a code-execution tool
+   for deriving stats from query results.
+3. **Agent**: a single Gemini call with both tools attached, grounded by a
+   system instruction that requires every claim to cite a real query result.
+4. **UI**: a minimal Streamlit chat interface.
+
+## Setup
+
+### 1. ClickHouse Cloud
+Create a free-trial service at [clickhouse.com/cloud](https://clickhouse.com/cloud)
+and note the HTTPS host, port, user, and password.
+
+### 2. Google Cloud / Gemini Enterprise Agent Platform
+Set up a GCP project with **billing enabled** and the **Agent Platform API**
+(`aiplatform.googleapis.com`) enabled, and the `roles/aiplatform.user` IAM
+role granted to your account. Then authenticate locally:
+
+```bash
+gcloud auth application-default login
+gcloud auth application-default set-quota-project YOUR_PROJECT_ID
+```
+
+### 3. Environment
+```bash
+cp .env.example .env
+# fill in your ClickHouse Cloud and GCP project details
+```
+
+### 4. Install dependencies
+Requires **Python 3.11+** (the `mcp` package needs 3.10+).
+
+```bash
+python3.11 -m venv .venv && source .venv/bin/activate
+pip install -r requirements.txt
+pip install -e .
+```
+
+### 5. Generate and load synthetic data
+```bash
+python -m agentic_cinema.data.generate_events --users 50000 --out data/viewing_events.parquet
+python -m agentic_cinema.data.load --parquet data/viewing_events.parquet
+```
+
+### 6. Run the agent
+```bash
+# CLI smoke test
+python -m agentic_cinema.agent
+
+# Chat UI
+streamlit run src/agentic_cinema/app.py
+```
+
+## License
+MIT — see [LICENSE](LICENSE).
