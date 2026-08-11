@@ -1,7 +1,9 @@
 google-genai>=1.0.0
+google-adk>=2.6.3
 mcp
 mcp-clickhouse
 clickhouse-connect
 python-dotenv
-streamlit
+fastapi
+uvicorn[standard]
 pandas

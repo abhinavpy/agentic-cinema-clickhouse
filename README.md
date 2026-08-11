@@ -12,12 +12,14 @@ Built for the [Agentic Cinema hackathon](https://agentic-cinema.devpost.com/) �
 
 1. **Data**: synthetic viewer-event stream for a fictional series, loaded into
    a ClickHouse Cloud `MergeTree` table (`agentic_cinema.viewing_events`).
-2. **Tooling**: Gemini connects to ClickHouse through the official
-   `mcp-clickhouse` MCP server (read-only queries) and a code-execution tool
-   for deriving stats from query results.
-3. **Agent**: a single Gemini call with both tools attached, grounded by a
-   system instruction that requires every claim to cite a real query result.
-4. **UI**: a minimal Streamlit chat interface.
+2. **Agent**: built on Google's **Agent Development Kit (ADK)** — an
+   `LlmAgent` running Gemini, wired to ClickHouse via ADK's `McpToolset`
+   pointed at the official `mcp-clickhouse` MCP server (read-only queries).
+   ADK's `InMemoryRunner` drives the query → execute → respond loop natively;
+   a system instruction requires every claim to cite a real query result.
+3. **API**: a small FastAPI backend (`src/agentic_cinema/server.py`) exposing
+   the agent as `POST /api/ask`.
+4. **UI**: a React + TypeScript frontend (`frontend/`, Vite) chat interface.
 
 ## Setup
 
@@ -56,13 +58,22 @@ python -m agentic_cinema.data.generate_events --users 50000 --out data/viewing_e
 python -m agentic_cinema.data.load --parquet data/viewing_events.parquet
 ```
 
-### 6. Run the agent
+### 6. Run it
+
 ```bash
 # CLI smoke test
 python -m agentic_cinema.agent
 
-# Chat UI
-streamlit run src/agentic_cinema/app.py
+# API backend (http://localhost:8000)
+uvicorn agentic_cinema.server:app --port 8000
+```
+
+In a second terminal, run the frontend (requires Node.js):
+
+```bash
+cd frontend
+npm install
+npm run dev  # http://localhost:5173
 ```
 
 ## License

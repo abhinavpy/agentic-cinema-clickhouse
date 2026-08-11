@@ -1,24 +1,21 @@
-"""Cutting Room Copilot: an audience-analytics agent on Gemini Enterprise
-Agent Platform, grounded in ClickHouse Cloud via the official mcp-clickhouse
-MCP server.
+"""Cutting Room Copilot: an audience-analytics agent built on Google's Agent
+Development Kit (ADK), powered by Gemini Enterprise Agent Platform, grounded
+in ClickHouse Cloud via the official mcp-clickhouse MCP server.
 
-Note: we don't hand Gemini a live `mcp.ClientSession` as a tool (the pattern
-shown in the SDK docs). That object holds live asyncio Futures, and this SDK
-version deep-copies GenerateContentConfig on every generate_content call
-(google/genai/models.py, `config.model_copy(deep=True)`), which crashes on
-non-picklable objects. Instead we pull static tool schemas from the MCP
-server once, hand Gemini plain FunctionDeclarations, and drive the
-call -> execute -> respond loop ourselves.
+ADK's LlmAgent + McpToolset handle the tool-calling loop (query -> execute ->
+respond -> repeat until a final answer) natively, so we don't hand-roll it.
 """
 import os
 import shutil
 import sys
+import uuid
 
 from dotenv import load_dotenv
-from google import genai
+from google.adk.agents import LlmAgent
+from google.adk.runners import InMemoryRunner
+from google.adk.tools.mcp_tool import McpToolset, StdioConnectionParams
 from google.genai import types
-from mcp import ClientSession, StdioServerParameters
-from mcp.client.stdio import stdio_client
+from mcp import StdioServerParameters
 
 load_dotenv()
 
@@ -39,7 +36,7 @@ Rules:
 """
 
 MODEL = "gemini-3.5-flash"
-MAX_TOOL_TURNS = 4  # if not converged by here, the next turn is forced text-only
+APP_NAME = "cutting-room-copilot"
 
 
 def _clickhouse_command() -> str:
@@ -54,125 +51,59 @@ def _clickhouse_command() -> str:
     raise RuntimeError("mcp-clickhouse not found; pip install -r requirements.txt")
 
 
-def _clickhouse_server_params() -> StdioServerParameters:
-    return StdioServerParameters(
-        command=_clickhouse_command(),
-        args=[],
-        env={
-            "CLICKHOUSE_HOST": os.environ["CLICKHOUSE_HOST"],
-            "CLICKHOUSE_PORT": os.environ.get("CLICKHOUSE_PORT", "8443"),
-            "CLICKHOUSE_USER": os.environ.get("CLICKHOUSE_USER", "default"),
-            "CLICKHOUSE_PASSWORD": os.environ["CLICKHOUSE_PASSWORD"],
-            "CLICKHOUSE_SECURE": os.environ.get("CLICKHOUSE_SECURE", "true"),
-        },
+def _clickhouse_connection_params() -> StdioConnectionParams:
+    return StdioConnectionParams(
+        server_params=StdioServerParameters(
+            command=_clickhouse_command(),
+            args=[],
+            env={
+                "CLICKHOUSE_HOST": os.environ["CLICKHOUSE_HOST"],
+                "CLICKHOUSE_PORT": os.environ.get("CLICKHOUSE_PORT", "8443"),
+                "CLICKHOUSE_USER": os.environ.get("CLICKHOUSE_USER", "default"),
+                "CLICKHOUSE_PASSWORD": os.environ["CLICKHOUSE_PASSWORD"],
+                "CLICKHOUSE_SECURE": os.environ.get("CLICKHOUSE_SECURE", "true"),
+            },
+        ),
+        timeout=60,
     )
 
 
-async def _mcp_function_declarations(session: ClientSession) -> list[types.FunctionDeclaration]:
-    listed = await session.list_tools()
-    return [
-        types.FunctionDeclaration(
-            name=t.name,
-            description=t.description or "",
-            parameters_json_schema=t.inputSchema,
-        )
-        for t in listed.tools
-    ]
-
-
-def _extract_text(content_blocks) -> str:
-    return "".join(getattr(c, "text", "") for c in content_blocks)
-
-
-def _response_text(response: types.GenerateContentResponse) -> str:
-    # response.text (the SDK convenience property) returns None whenever a
-    # candidate mixes text with any non-text part, which happens often here
-    # since a turn can carry both a function_call and reasoning text. Extract
-    # and join text parts ourselves instead of relying on it.
-    if not response.candidates:
-        return ""
-    parts = response.candidates[0].content.parts or []
-    return "".join(part.text for part in parts if part.text)
+def _build_agent() -> LlmAgent:
+    clickhouse_toolset = McpToolset(connection_params=_clickhouse_connection_params())
+    return LlmAgent(
+        name="cutting_room_copilot",
+        model=MODEL,
+        instruction=SYSTEM_INSTRUCTION,
+        tools=[clickhouse_toolset],
+    )
 
 
 async def ask(user_prompt: str) -> str:
-    client = genai.Client(
-        enterprise=True,
-        project=os.environ["GOOGLE_CLOUD_PROJECT"],
-        location=os.environ.get("GOOGLE_CLOUD_LOCATION", "global"),
-    )
+    agent = _build_agent()
+    runner = InMemoryRunner(agent=agent, app_name=APP_NAME)
+    user_id = "editorial"
 
-    async with stdio_client(_clickhouse_server_params()) as (read, write):
-        async with ClientSession(read, write) as session:
-            await session.initialize()
+    try:
+        session = await runner.session_service.create_session(
+            app_name=APP_NAME, user_id=user_id
+        )
 
-            clickhouse_tool = types.Tool(
-                function_declarations=await _mcp_function_declarations(session)
-            )
-
-            contents: list[types.Content] = [
-                types.Content(role="user", parts=[types.Part.from_text(text=user_prompt)])
-            ]
-            evidence_log: list[str] = []
-
-            for _ in range(MAX_TOOL_TURNS):
-                response = await client.aio.models.generate_content(
-                    model=MODEL,
-                    contents=contents,
-                    config=types.GenerateContentConfig(
-                        system_instruction=SYSTEM_INSTRUCTION,
-                        temperature=0,
-                        tools=[clickhouse_tool],
-                    ),
+        final_text = ""
+        async for event in runner.run_async(
+            user_id=user_id,
+            session_id=session.id,
+            new_message=types.Content(
+                role="user", parts=[types.Part.from_text(text=user_prompt)]
+            ),
+        ):
+            if event.is_final_response() and event.content and event.content.parts:
+                final_text = "".join(
+                    part.text for part in event.content.parts if part.text
                 )
 
-                candidate_content = response.candidates[0].content
-                contents.append(candidate_content)
-
-                function_calls = [
-                    part.function_call for part in candidate_content.parts if part.function_call
-                ]
-                if not function_calls:
-                    text = _response_text(response)
-                    if text:
-                        return text
-                    break
-
-                response_parts = []
-                for fc in function_calls:
-                    result = await session.call_tool(fc.name, dict(fc.args or {}))
-                    result_text = _extract_text(result.content)
-                    evidence_log.append(f"Query: {fc.name}({dict(fc.args or {})})\nResult: {result_text}")
-                    response_parts.append(
-                        types.Part.from_function_response(
-                            name=fc.name,
-                            response={"result": result_text},
-                        )
-                    )
-                contents.append(types.Content(role="tool", parts=response_parts))
-
-            # Didn't converge on its own -- ask again with a clean, tool-free
-            # turn so the API can't keep echoing prior function calls.
-            summary_prompt = (
-                f"Original question: {user_prompt}\n\n"
-                "You already ran these ClickHouse queries and got these results:\n\n"
-                + "\n\n".join(evidence_log)
-                + "\n\nBased only on this data, give your final answer now: name the "
-                "exact episode and timestamp range where drop-off spikes, cite the "
-                "numbers, and give one concrete recommendation for editorial."
-            )
-            final_response = await client.aio.models.generate_content(
-                model=MODEL,
-                contents=summary_prompt,
-                config=types.GenerateContentConfig(
-                    system_instruction=SYSTEM_INSTRUCTION,
-                    temperature=0,
-                ),
-            )
-            return _response_text(final_response) or (
-                "I gathered data but couldn't produce a final answer. "
-                "Evidence collected:\n\n" + "\n\n".join(evidence_log)
-            )
+        return final_text or "The agent finished without producing a final answer."
+    finally:
+        await runner.close()
 
 
 if __name__ == "__main__":
