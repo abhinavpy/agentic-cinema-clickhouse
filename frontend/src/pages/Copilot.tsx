@@ -2,7 +2,9 @@ import { useState, useRef, useEffect, type FormEvent } from "react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import { api } from "../api";
-import "./Copilot.css";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { cn } from "@/lib/utils";
 
 interface ChatMessage {
   role: "user" | "assistant";
@@ -43,52 +45,69 @@ function Copilot() {
   }
 
   return (
-    <div className="copilot">
-      <header className="page-header">
-        <h1>🎬 Copilot</h1>
-        <p>Ask anything about audience behavior — grounded in ClickHouse Cloud + Gemini</p>
+    <div className="flex h-screen max-w-3xl flex-col px-10 py-8">
+      <header className="shrink-0">
+        <h1 className="text-2xl font-semibold">🎬 Copilot</h1>
+        <p className="mt-1.5 text-sm text-muted-foreground">
+          Ask anything about audience behavior — grounded in ClickHouse Cloud + Gemini
+        </p>
       </header>
 
-      <main className="chat">
+      <main className="flex-1 space-y-4 overflow-y-auto py-5">
         {messages.length === 0 && (
-          <div className="empty-state">
+          <div className="text-sm text-muted-foreground">
             Try: <em>"{EXAMPLE_QUESTION}"</em>
           </div>
         )}
         {messages.map((m, i) => (
-          <div key={i} className={`bubble ${m.role}`}>
-            <span className="avatar">{m.role === "user" ? "🎥" : "🤖"}</span>
-            <div className="content">
-              <ReactMarkdown remarkPlugins={[remarkGfm]}>{m.content}</ReactMarkdown>
-            </div>
-          </div>
+          <ChatBubble key={i} role={m.role}>
+            <ReactMarkdown remarkPlugins={[remarkGfm]}>{m.content}</ReactMarkdown>
+          </ChatBubble>
         ))}
 
         {loading && (
-          <div className="bubble assistant">
-            <span className="avatar">🤖</span>
-            <div className="content loading">
-              <span className="spinner" />
+          <ChatBubble role="assistant">
+            <div className="flex items-center gap-2.5 text-muted-foreground">
+              <span className="h-4 w-4 animate-spin rounded-full border-2 border-border border-t-muted-foreground" />
               Querying ClickHouse and analyzing...
             </div>
-          </div>
+          </ChatBubble>
         )}
 
-        {error && <div className="error">Error: {error}</div>}
+        {error && <div className="text-sm text-destructive">Error: {error}</div>}
         <div ref={bottomRef} />
       </main>
 
-      <form className="composer" onSubmit={handleSubmit}>
-        <input
+      <form className="flex shrink-0 gap-2.5 pb-2" onSubmit={handleSubmit}>
+        <Input
           value={input}
           onChange={(e) => setInput(e.target.value)}
           placeholder={`Ask about audience behavior, e.g. '${EXAMPLE_QUESTION}'`}
           disabled={loading}
         />
-        <button type="submit" disabled={loading || !input.trim()} aria-label="Send">
+        <Button type="submit" disabled={loading || !input.trim()} size="icon" aria-label="Send">
           ↑
-        </button>
+        </Button>
       </form>
+    </div>
+  );
+}
+
+function ChatBubble({ role, children }: { role: "user" | "assistant"; children: React.ReactNode }) {
+  return (
+    <div className="flex items-start gap-3">
+      <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border border-border bg-card text-[1.1rem]">
+        {role === "user" ? "🎥" : "🤖"}
+      </span>
+      <div
+        className={cn(
+          "prose prose-sm dark:prose-invert max-w-none overflow-x-auto rounded-xl border border-border bg-card px-4.5 py-3.5 leading-relaxed",
+          "prose-headings:mt-0 prose-p:my-2 first:prose-p:mt-0 last:prose-p:mb-0",
+          "prose-table:my-3 prose-th:text-left"
+        )}
+      >
+        {children}
+      </div>
     </div>
   );
 }

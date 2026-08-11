@@ -3,13 +3,12 @@ import Sidebar from "./components/Sidebar";
 import Dashboard from "./pages/Dashboard";
 import ChurnRisk from "./pages/ChurnRisk";
 import Copilot from "./pages/Copilot";
-import "./App.css";
 
 function App() {
   return (
-    <div className="shell">
+    <div className="flex min-h-screen">
       <Sidebar />
-      <div className="shell-content">
+      <div className="min-w-0 flex-1">
         <Routes>
           <Route path="/" element={<Dashboard />} />
           <Route path="/churn-risk" element={<ChurnRisk />} />

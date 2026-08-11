@@ -1,4 +1,5 @@
-import "./StatTile.css";
+import { Card, CardContent } from "@/components/ui/card";
+import { cn } from "@/lib/utils";
 
 interface StatTileProps {
   label: string;
@@ -7,13 +8,24 @@ interface StatTileProps {
   tone?: "default" | "good" | "warning" | "critical";
 }
 
+const TONE_CLASS: Record<NonNullable<StatTileProps["tone"]>, string> = {
+  default: "",
+  good: "text-[var(--success-text)]",
+  warning: "text-[var(--status-warning)]",
+  critical: "text-[var(--status-critical)]",
+};
+
 function StatTile({ label, value, sublabel, tone = "default" }: StatTileProps) {
   return (
-    <div className="stat-tile">
-      <div className="stat-label">{label}</div>
-      <div className={`stat-value tone-${tone}`}>{value}</div>
-      {sublabel && <div className="stat-sublabel">{sublabel}</div>}
-    </div>
+    <Card size="sm">
+      <CardContent className="space-y-1">
+        <div className="text-sm text-muted-foreground">{label}</div>
+        <div className={cn("text-2xl font-semibold tracking-tight tabular-nums", TONE_CLASS[tone])}>
+          {value}
+        </div>
+        {sublabel && <div className="text-xs text-muted-foreground">{sublabel}</div>}
+      </CardContent>
+    </Card>
   );
 }
 

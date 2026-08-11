@@ -1,5 +1,6 @@
 import type { ReactNode } from "react";
-import "./ChartCard.css";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { cn } from "@/lib/utils";
 
 interface ChartCardProps {
   title: string;
@@ -10,13 +11,13 @@ interface ChartCardProps {
 
 function ChartCard({ title, subtitle, children, wide }: ChartCardProps) {
   return (
-    <div className={`chart-card ${wide ? "wide" : ""}`}>
-      <div className="chart-card-header">
-        <h3>{title}</h3>
-        {subtitle && <p>{subtitle}</p>}
-      </div>
-      <div className="chart-card-body">{children}</div>
-    </div>
+    <Card className={cn(wide && "col-span-full")}>
+      <CardHeader>
+        <CardTitle>{title}</CardTitle>
+        {subtitle && <CardDescription>{subtitle}</CardDescription>}
+      </CardHeader>
+      <CardContent>{children}</CardContent>
+    </Card>
   );
 }
 
