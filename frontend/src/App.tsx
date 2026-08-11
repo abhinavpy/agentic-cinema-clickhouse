@@ -1,6 +1,7 @@
 import { Route, Routes } from "react-router-dom";
 import Sidebar from "./components/Sidebar";
 import Dashboard from "./pages/Dashboard";
+import ChurnRisk from "./pages/ChurnRisk";
 import Copilot from "./pages/Copilot";
 import "./App.css";
 
@@ -11,6 +12,7 @@ function App() {
       <div className="shell-content">
         <Routes>
           <Route path="/" element={<Dashboard />} />
+          <Route path="/churn-risk" element={<ChurnRisk />} />
           <Route path="/copilot" element={<Copilot />} />
         </Routes>
       </div>

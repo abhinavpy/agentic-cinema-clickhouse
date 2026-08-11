@@ -1,4 +1,8 @@
-export const API_BASE = import.meta.env.VITE_API_BASE ?? "http://localhost:8000";
+// In production the frontend is served by the same FastAPI app (same origin),
+// so relative paths just work. In local dev, Vite and uvicorn run on
+// different ports, so default to localhost:8000 unless overridden.
+export const API_BASE =
+  import.meta.env.VITE_API_BASE ?? (import.meta.env.PROD ? "" : "http://localhost:8000");
 
 export interface Overview {
   total_viewers: number;
@@ -34,6 +38,26 @@ export interface RegionBreakdown {
   viewers: number;
 }
 
+export type RiskBucket = "critical" | "serious" | "warning" | "good";
+
+export interface AtRiskViewer {
+  user_id: number;
+  risk_score: number;
+  risk_bucket: RiskBucket;
+  primary_reason: string;
+  episodes_started: number;
+  episodes_completed: number;
+  completion_rate: number;
+  max_episode_reached: number;
+  days_inactive: number;
+}
+
+export interface ChurnRisk {
+  total_viewers: number;
+  bucket_counts: Record<RiskBucket, number>;
+  top_at_risk: AtRiskViewer[];
+}
+
 async function getJSON<T>(path: string): Promise<T> {
   const res = await fetch(`${API_BASE}${path}`);
   if (!res.ok) throw new Error(`${path} failed (${res.status})`);
@@ -46,6 +70,7 @@ export const api = {
   dropoffsByEpisode: () => getJSON<EpisodeDropoffs[]>("/api/analytics/dropoffs-by-episode"),
   byDevice: () => getJSON<DeviceBreakdown[]>("/api/analytics/by-device"),
   byRegion: () => getJSON<RegionBreakdown[]>("/api/analytics/by-region"),
+  churnRisk: (limit = 50) => getJSON<ChurnRisk>(`/api/analytics/churn-risk?limit=${limit}`),
   async ask(question: string): Promise<string> {
     const res = await fetch(`${API_BASE}/api/ask`, {
       method: "POST",

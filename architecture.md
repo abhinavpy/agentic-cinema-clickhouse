@@ -195,18 +195,51 @@ agent queries.
 3. **`load.py`** connects to ClickHouse Cloud (`clickhouse-connect`), applies
    the schema, and bulk-inserts the parquet data in 200K-row chunks.
 
+## Churn risk methodology
+
+`analytics.get_churn_risk()` scores each viewer's risk of abandoning the
+series (0-100). The dataset is a single show, so there's no real
+subscription-cancellation signal to learn from -- this is a defensible proxy
+built from the behavioral signals that do exist. In a product with multiple
+shows and account-level activity, the same shape of score would extend
+directly to real subscription churn.
+
+Four weighted factors, each computed per viewer:
+
+| Factor | Weight | What it measures |
+|---|---|---|
+| Inactivity | 40% | Days since their last event |
+| Completion rate | 25% | Share of started episodes they actually finished |
+| Series progress | 20% | How far into the 6-episode series they got (`max_episode_reached / 6`) |
+| Drop severity | 15% | On average, how early within an episode they tend to quit |
+
+Each factor is converted to a **percentile rank within the viewer
+population** (0-1) before weighting, rather than scored against a fixed
+threshold (e.g. "inactive > 7 days = risky"). This matters here because
+`generate_events.py` spreads viewing activity across a ~21-day window with
+random start times per viewer -- an absolute "days since last event"
+threshold would flag anyone who started early in that window as inactive,
+independent of whether they actually disengaged. Percentile ranking scores
+everyone relative to the same population instead, which also happens to be
+the more standard approach for a real risk model (relative to peers, not an
+arbitrary constant). The weighted percentiles sum to a 0-100 score, bucketed
+into `good` (<30) / `warning` (30-50) / `serious` (50-70) / `critical` (≥70),
+and the highest-weighted factor per viewer becomes the human-readable
+`primary_reason` shown in the UI.
+
 ## Component reference
 
 | Component | File | Responsibility |
 |---|---|---|
-| App shell | `frontend/src/App.tsx` | Sidebar + React Router routes (`/` Dashboard, `/copilot` Copilot) |
+| App shell | `frontend/src/App.tsx` | Sidebar + React Router routes (`/` Dashboard, `/churn-risk` Churn Risk, `/copilot` Copilot) |
 | Dashboard page | `frontend/src/pages/Dashboard.tsx` | Fetches all analytics endpoints, lays out stat tiles + chart cards |
+| Churn Risk page | `frontend/src/pages/ChurnRisk.tsx` | Risk-bucket stat tiles, distribution chart, at-risk viewers table |
 | Copilot page | `frontend/src/pages/Copilot.tsx` | Chat input, message history, markdown rendering, loading/error states |
-| Charts | `frontend/src/charts/RetentionChart.tsx`, `SimpleBarChart.tsx` | Recharts wrappers styled to the validated categorical palette |
+| Charts | `frontend/src/charts/RetentionChart.tsx`, `SimpleBarChart.tsx` | Recharts wrappers styled to the validated categorical/status palette |
 | API client | `frontend/src/api.ts` | Typed `fetch` helpers for every backend endpoint |
 | API | `src/agentic_cinema/server.py` | FastAPI: `POST /api/ask` → `agent.ask()`; `GET /api/analytics/*` → `analytics.py` |
 | Agent | `src/agentic_cinema/agent.py` | ADK `LlmAgent` + `McpToolset` + `InMemoryRunner`; system instruction; response extraction |
-| Analytics | `src/agentic_cinema/analytics.py` | Direct (non-LLM) ClickHouse queries backing the dashboard |
+| Analytics | `src/agentic_cinema/analytics.py` | Direct (non-LLM) ClickHouse queries backing the dashboard, including churn-risk scoring |
 | MCP server | `mcp-clickhouse` (installed dependency) | Exposes ClickHouse as MCP tools (`list_databases`, `list_tables`, `run_query`) |
 | Data generator | `src/agentic_cinema/data/generate_events.py` | Synthesizes the viewer-event dataset |
 | Schema/loader | `src/agentic_cinema/data/schema.sql`, `load.py` | Defines and populates the ClickHouse table |

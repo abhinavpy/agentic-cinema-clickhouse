@@ -3,6 +3,7 @@ import "./Sidebar.css";
 
 const NAV_ITEMS = [
   { to: "/", label: "Dashboard", icon: "📊", end: true },
+  { to: "/churn-risk", label: "Churn Risk", icon: "⚠️", end: false },
   { to: "/copilot", label: "Copilot", icon: "🎬", end: false },
 ];
 

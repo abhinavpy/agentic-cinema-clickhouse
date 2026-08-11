@@ -1,0 +1,14 @@
+.venv
+frontend/node_modules
+frontend/dist
+.git
+.env
+.env.*
+!frontend/.env.example
+data/*.parquet
+data/*.csv
+__pycache__
+*.pyc
+*.egg-info
+scripts
+.claude
