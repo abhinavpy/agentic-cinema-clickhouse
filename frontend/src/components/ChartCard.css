@@ -1,0 +1,27 @@
+.chart-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 0.75rem;
+  padding: 1.1rem 1.25rem 1.25rem;
+  grid-column: span 1;
+}
+
+.chart-card.wide {
+  grid-column: 1 / -1;
+}
+
+.chart-card-header {
+  margin-bottom: 0.9rem;
+}
+
+.chart-card-header h3 {
+  margin: 0;
+  font-size: 0.95rem;
+  font-weight: 600;
+}
+
+.chart-card-header p {
+  margin: 0.2rem 0 0;
+  font-size: 0.8rem;
+  color: var(--text-muted);
+}

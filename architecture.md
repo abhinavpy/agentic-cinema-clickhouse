@@ -1,21 +1,31 @@
 # Architecture
 
-Cutting Room Copilot is an audience-analytics agent for a streaming studio's
-editorial team. An editor asks a natural-language question about viewer
-behavior; the agent queries real event data in ClickHouse Cloud, reasons over
-the results with Gemini, and returns a grounded, cited, actionable answer.
+Cutting Room Copilot is an audience-analytics product for a streaming
+studio's editorial team, with two surfaces on one backend:
+
+- A **Dashboard** of live viewership metrics and charts, computed directly
+  from ClickHouse — fast, no LLM involved.
+- A **Copilot** chat for open-ended questions, where an ADK agent queries
+  ClickHouse itself, reasons over the results with Gemini, and returns a
+  grounded, cited, actionable answer.
 
 ## System diagram
 
 ```mermaid
 flowchart TB
-    subgraph client["Browser"]
-        UI["React + TypeScript UI<br/>frontend/src/App.tsx<br/>(Vite dev server :5173)"]
+    subgraph client["Browser (React Router)"]
+        Shell["App.tsx shell + Sidebar<br/>(Vite dev server :5173)"]
+        Dash["Dashboard page<br/>stat tiles + charts (Recharts)"]
+        Copilot["Copilot page<br/>chat UI"]
+        Shell --> Dash
+        Shell --> Copilot
     end
 
-    subgraph backend["Python backend"]
-        API["FastAPI<br/>src/agentic_cinema/server.py<br/>POST /api/ask (:8000)"]
-        Agent["ADK LlmAgent<br/>src/agentic_cinema/agent.py<br/>model: gemini-3.5-flash"]
+    subgraph backend["Python backend (FastAPI, src/agentic_cinema/server.py, :8000)"]
+        AnalyticsEP["GET /api/analytics/*"]
+        AskEP["POST /api/ask"]
+        Analytics["analytics.py<br/>direct ClickHouse queries<br/>(overview, retention, breakdowns)"]
+        Agent["ADK LlmAgent<br/>agent.py, model: gemini-3.5-flash"]
         Runner["ADK InMemoryRunner<br/>drives the tool-call loop"]
         Toolset["ADK McpToolset<br/>(StdioConnectionParams)"]
     end
@@ -32,8 +42,13 @@ flowchart TB
         Table[("agentic_cinema.viewing_events<br/>MergeTree, ~800K rows")]
     end
 
-    UI -- "fetch POST /api/ask<br/>{question}" --> API
-    API -- "await ask(question)" --> Agent
+    Dash -- "fetch GET /api/analytics/*" --> AnalyticsEP
+    AnalyticsEP -- "run_in_threadpool" --> Analytics
+    Analytics -- "clickhouse_connect (sync)" --> Table
+    Table -- "rows" --> Analytics --> AnalyticsEP --> Dash
+
+    Copilot -- "fetch POST /api/ask<br/>{question}" --> AskEP
+    AskEP -- "await ask(question)" --> Agent
     Agent -- "wraps" --> Runner
     Runner -- "run_async(new_message)" --> Gemini
     Gemini -- "function_call(s)" --> Runner
@@ -46,8 +61,8 @@ flowchart TB
     Runner -- "next turn" --> Gemini
     Gemini -- "final text (is_final_response)" --> Runner
     Runner -- "event stream" --> Agent
-    Agent -- "answer: str" --> API
-    API -- "{answer}" --> UI
+    Agent -- "answer: str" --> AskEP
+    AskEP -- "{answer}" --> Copilot
 
     subgraph offline["Offline data pipeline (run once, before demo)"]
         Gen["generate_events.py<br/>synthesize viewer events"]
@@ -57,15 +72,48 @@ flowchart TB
     Gen --> Parquet --> Load --> Table
 ```
 
-## Step-by-step: what happens when an editor asks a question
+## Step-by-step: what happens when the Dashboard loads
 
-1. **Editor types a question** in the React chat UI (`frontend/src/App.tsx`),
+1. **Editor opens the Dashboard** (`/`, `frontend/src/pages/Dashboard.tsx`).
+   Five independent requests fire in parallel via a small `useAsync` hook,
+   one per metric: overview, retention curves, drop-offs by episode, and
+   breakdowns by device/region.
+
+2. **Each hits a dedicated FastAPI route** (`server.py`), e.g.
+   `GET /api/analytics/retention`, which calls the matching function in
+   `analytics.py` through `run_in_threadpool` — ClickHouse's Python client
+   is synchronous, so this keeps the blocking query off the event loop that
+   also serves longer-running `/api/ask` requests.
+
+3. **`analytics.py` queries ClickHouse Cloud directly** with
+   `clickhouse_connect` — no Gemini call anywhere in this path. The
+   retention curve is the one non-trivial query: rows are only emitted for
+   seek/pause/drop_off/complete events (see the data pipeline below), so
+   retention can't be read off row-presence at a timestamp. Instead,
+   `get_retention_curves()` fetches each session's actual endpoint
+   (`max(position_seconds)` per session) and computes a survival curve —
+   % of sessions whose endpoint is at or past each 30s mark — via
+   `bisect` over the sorted endpoints.
+
+4. **The frontend renders the response** with Recharts: a multi-series line
+   chart for retention (one line per episode, colored from a
+   colorblind-validated categorical palette, `charts/RetentionChart.tsx`),
+   and single-series bar charts for the rest (`charts/SimpleBarChart.tsx`).
+   Entrance animations are disabled (`isAnimationActive={false}`) — Recharts'
+   default draw-in animation depends on `requestAnimationFrame`, which
+   browsers throttle in backgrounded/unfocused tabs, and a throttled
+   animation can visually freeze the chart mid-draw.
+
+## Step-by-step: what happens when an editor asks the Copilot a question
+
+1. **Editor types a question** in the chat UI (`frontend/src/pages/Copilot.tsx`),
    e.g. *"Where do viewers drop off in episode 3, and what should we cut?"*,
    and hits send. The UI immediately appends a user chat bubble and shows a
    spinner ("Querying ClickHouse and analyzing...").
 
-2. **Frontend calls the backend.** `App.tsx` does a `fetch` `POST` to
-   `http://localhost:8000/api/ask` with `{"question": "..."}` as JSON.
+2. **Frontend calls the backend.** `Copilot.tsx` calls `api.ask(question)`
+   (`frontend/src/api.ts`), a `fetch` `POST` to `http://localhost:8000/api/ask`
+   with `{"question": "..."}` as JSON.
 
 3. **FastAPI receives the request.** `server.py`'s `ask_endpoint` calls
    `agentic_cinema.agent.ask(question)` and awaits the result — this is the
@@ -151,9 +199,14 @@ agent queries.
 
 | Component | File | Responsibility |
 |---|---|---|
-| Chat UI | `frontend/src/App.tsx` | Question input, chat history, markdown rendering, loading/error states |
-| API | `src/agentic_cinema/server.py` | Thin FastAPI wrapper: `POST /api/ask` → `agent.ask()` |
+| App shell | `frontend/src/App.tsx` | Sidebar + React Router routes (`/` Dashboard, `/copilot` Copilot) |
+| Dashboard page | `frontend/src/pages/Dashboard.tsx` | Fetches all analytics endpoints, lays out stat tiles + chart cards |
+| Copilot page | `frontend/src/pages/Copilot.tsx` | Chat input, message history, markdown rendering, loading/error states |
+| Charts | `frontend/src/charts/RetentionChart.tsx`, `SimpleBarChart.tsx` | Recharts wrappers styled to the validated categorical palette |
+| API client | `frontend/src/api.ts` | Typed `fetch` helpers for every backend endpoint |
+| API | `src/agentic_cinema/server.py` | FastAPI: `POST /api/ask` → `agent.ask()`; `GET /api/analytics/*` → `analytics.py` |
 | Agent | `src/agentic_cinema/agent.py` | ADK `LlmAgent` + `McpToolset` + `InMemoryRunner`; system instruction; response extraction |
+| Analytics | `src/agentic_cinema/analytics.py` | Direct (non-LLM) ClickHouse queries backing the dashboard |
 | MCP server | `mcp-clickhouse` (installed dependency) | Exposes ClickHouse as MCP tools (`list_databases`, `list_tables`, `run_query`) |
 | Data generator | `src/agentic_cinema/data/generate_events.py` | Synthesizes the viewer-event dataset |
 | Schema/loader | `src/agentic_cinema/data/schema.sql`, `load.py` | Defines and populates the ClickHouse table |

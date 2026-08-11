@@ -1,0 +1,137 @@
+.copilot {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  max-width: 860px;
+  padding: 2rem 2.5rem 1.5rem;
+}
+
+.copilot .chat {
+  flex: 1;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  padding: 1.25rem 0;
+}
+
+.empty-state {
+  color: var(--text-muted);
+  font-size: 0.9rem;
+}
+
+.bubble {
+  display: flex;
+  gap: 0.75rem;
+  align-items: flex-start;
+}
+
+.avatar {
+  flex-shrink: 0;
+  width: 2.25rem;
+  height: 2.25rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 0.65rem;
+  font-size: 1.1rem;
+  background: var(--surface);
+  border: 1px solid var(--border);
+}
+
+.bubble .content {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 0.75rem;
+  padding: 0.85rem 1.1rem;
+  line-height: 1.55;
+  overflow-x: auto;
+}
+
+.content :first-child {
+  margin-top: 0;
+}
+
+.content :last-child {
+  margin-bottom: 0;
+}
+
+.content table {
+  border-collapse: collapse;
+  margin: 0.75rem 0;
+  font-size: 0.9rem;
+}
+
+.content th,
+.content td {
+  border: 1px solid var(--border);
+  padding: 0.4rem 0.7rem;
+  text-align: left;
+}
+
+.content.loading {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  color: var(--text-muted);
+}
+
+.spinner {
+  width: 1rem;
+  height: 1rem;
+  border-radius: 50%;
+  border: 2px solid var(--border);
+  border-top-color: var(--text-muted);
+  animation: spin 0.8s linear infinite;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.error {
+  color: var(--status-critical);
+  font-size: 0.9rem;
+}
+
+.composer {
+  display: flex;
+  gap: 0.6rem;
+  padding: 0.75rem 0 0.5rem;
+}
+
+.composer input {
+  flex: 1;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 0.65rem;
+  padding: 0.75rem 1rem;
+  color: inherit;
+  font-size: 0.95rem;
+}
+
+.composer input:focus {
+  outline: none;
+  border-color: var(--accent);
+}
+
+.composer button {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 0.65rem;
+  width: 2.75rem;
+  font-size: 1.1rem;
+  cursor: pointer;
+  color: inherit;
+}
+
+.composer button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.composer button:not(:disabled):hover {
+  border-color: var(--accent);
+}

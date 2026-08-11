@@ -1,10 +1,12 @@
 # Cutting Room Copilot
 
-An audience-analytics agent for a streaming studio's editorial team. Ask it
-things like *"Where do viewers drop off in episode 3, and what should we cut?"*
-— it queries real viewing-event data in **ClickHouse Cloud** via the official
-`mcp-clickhouse` MCP server, reasons over the results with **Gemini Enterprise
-Agent Platform**, and returns a grounded, actionable recommendation.
+An audience-analytics product for a streaming studio's editorial team: a
+**dashboard** of live viewership metrics plus a **copilot** you can ask
+open-ended questions like *"Where do viewers drop off in episode 3, and what
+should we cut?"* — it queries real viewing-event data in **ClickHouse Cloud**
+via the official `mcp-clickhouse` MCP server, reasons over the results with
+**Gemini Enterprise Agent Platform**, and returns a grounded, actionable
+recommendation.
 
 Built for the [Agentic Cinema hackathon](https://agentic-cinema.devpost.com/) — ClickHouse partner track.
 
@@ -17,9 +19,17 @@ Built for the [Agentic Cinema hackathon](https://agentic-cinema.devpost.com/) �
    pointed at the official `mcp-clickhouse` MCP server (read-only queries).
    ADK's `InMemoryRunner` drives the query → execute → respond loop natively;
    a system instruction requires every claim to cite a real query result.
-3. **API**: a small FastAPI backend (`src/agentic_cinema/server.py`) exposing
-   the agent as `POST /api/ask`.
-4. **UI**: a React + TypeScript frontend (`frontend/`, Vite) chat interface.
+3. **Analytics**: fast, direct ClickHouse queries (`src/agentic_cinema/analytics.py`)
+   for at-a-glance dashboard metrics — no LLM involved. The agent is reserved
+   for open-ended natural-language questions.
+4. **API**: a FastAPI backend (`src/agentic_cinema/server.py`) exposing the
+   agent as `POST /api/ask` and analytics as `GET /api/analytics/*`.
+5. **UI**: a React + TypeScript frontend (`frontend/`, Vite) with two pages —
+   a **Dashboard** (stat tiles + charts, using a validated colorblind-safe
+   categorical palette) and the **Copilot** chat.
+
+See [architecture.md](architecture.md) for the full request-lifecycle diagram
+and step-by-step walkthrough.
 
 ## Setup
 
