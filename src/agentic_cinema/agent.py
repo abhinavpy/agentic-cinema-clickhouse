@@ -84,6 +84,17 @@ def _extract_text(content_blocks) -> str:
     return "".join(getattr(c, "text", "") for c in content_blocks)
 
 
+def _response_text(response: types.GenerateContentResponse) -> str:
+    # response.text (the SDK convenience property) returns None whenever a
+    # candidate mixes text with any non-text part, which happens often here
+    # since a turn can carry both a function_call and reasoning text. Extract
+    # and join text parts ourselves instead of relying on it.
+    if not response.candidates:
+        return ""
+    parts = response.candidates[0].content.parts or []
+    return "".join(part.text for part in parts if part.text)
+
+
 async def ask(user_prompt: str) -> str:
     client = genai.Client(
         enterprise=True,
@@ -122,7 +133,10 @@ async def ask(user_prompt: str) -> str:
                     part.function_call for part in candidate_content.parts if part.function_call
                 ]
                 if not function_calls:
-                    return response.text
+                    text = _response_text(response)
+                    if text:
+                        return text
+                    break
 
                 response_parts = []
                 for fc in function_calls:
@@ -155,7 +169,10 @@ async def ask(user_prompt: str) -> str:
                     temperature=0,
                 ),
             )
-            return final_response.text
+            return _response_text(final_response) or (
+                "I gathered data but couldn't produce a final answer. "
+                "Evidence collected:\n\n" + "\n\n".join(evidence_log)
+            )
 
 
 if __name__ == "__main__":
