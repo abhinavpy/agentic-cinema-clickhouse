@@ -1,6 +1,14 @@
 """Cutting Room Copilot: an audience-analytics agent on Gemini Enterprise
 Agent Platform, grounded in ClickHouse Cloud via the official mcp-clickhouse
-MCP server, with code execution for deriving stats/charts from query results.
+MCP server.
+
+Note: we don't hand Gemini a live `mcp.ClientSession` as a tool (the pattern
+shown in the SDK docs). That object holds live asyncio Futures, and this SDK
+version deep-copies GenerateContentConfig on every generate_content call
+(google/genai/models.py, `config.model_copy(deep=True)`), which crashes on
+non-picklable objects. Instead we pull static tool schemas from the MCP
+server once, hand Gemini plain FunctionDeclarations, and drive the
+call -> execute -> respond loop ourselves.
 """
 import os
 import shutil
@@ -17,17 +25,21 @@ load_dotenv()
 SYSTEM_INSTRUCTION = """\
 You are an audience analytics copilot for a streaming studio's editorial team.
 You have access to a ClickHouse database (agentic_cinema.viewing_events) via
-MCP tools, and a code execution tool for computing derived stats or charts.
+MCP tools.
 
 Rules:
 - Only ever run read-only SELECT queries.
 - Ground every claim in an actual query result; state the row counts behind it.
+- Be efficient: 2-3 queries should be enough to find a pattern. Start broad
+  (aggregate drop-offs per episode), then narrow into the specific episode
+  and time window, then stop and answer.
 - When you find a drop-off pattern, name the exact episode and timestamp range,
   and give one concrete, actionable recommendation for editorial (e.g. trim,
   reorder, or recut a scene).
 """
 
 MODEL = "gemini-3.5-flash"
+MAX_TOOL_TURNS = 4  # if not converged by here, the next turn is forced text-only
 
 
 def _clickhouse_command() -> str:
@@ -56,6 +68,22 @@ def _clickhouse_server_params() -> StdioServerParameters:
     )
 
 
+async def _mcp_function_declarations(session: ClientSession) -> list[types.FunctionDeclaration]:
+    listed = await session.list_tools()
+    return [
+        types.FunctionDeclaration(
+            name=t.name,
+            description=t.description or "",
+            parameters_json_schema=t.inputSchema,
+        )
+        for t in listed.tools
+    ]
+
+
+def _extract_text(content_blocks) -> str:
+    return "".join(getattr(c, "text", "") for c in content_blocks)
+
+
 async def ask(user_prompt: str) -> str:
     client = genai.Client(
         enterprise=True,
@@ -63,22 +91,71 @@ async def ask(user_prompt: str) -> str:
         location=os.environ.get("GOOGLE_CLOUD_LOCATION", "global"),
     )
 
-    code_execution_tool = types.Tool(code_execution=types.ToolCodeExecution())
-
     async with stdio_client(_clickhouse_server_params()) as (read, write):
         async with ClientSession(read, write) as session:
             await session.initialize()
 
-            response = await client.aio.models.generate_content(
+            clickhouse_tool = types.Tool(
+                function_declarations=await _mcp_function_declarations(session)
+            )
+
+            contents: list[types.Content] = [
+                types.Content(role="user", parts=[types.Part.from_text(text=user_prompt)])
+            ]
+            evidence_log: list[str] = []
+
+            for _ in range(MAX_TOOL_TURNS):
+                response = await client.aio.models.generate_content(
+                    model=MODEL,
+                    contents=contents,
+                    config=types.GenerateContentConfig(
+                        system_instruction=SYSTEM_INSTRUCTION,
+                        temperature=0,
+                        tools=[clickhouse_tool],
+                    ),
+                )
+
+                candidate_content = response.candidates[0].content
+                contents.append(candidate_content)
+
+                function_calls = [
+                    part.function_call for part in candidate_content.parts if part.function_call
+                ]
+                if not function_calls:
+                    return response.text
+
+                response_parts = []
+                for fc in function_calls:
+                    result = await session.call_tool(fc.name, dict(fc.args or {}))
+                    result_text = _extract_text(result.content)
+                    evidence_log.append(f"Query: {fc.name}({dict(fc.args or {})})\nResult: {result_text}")
+                    response_parts.append(
+                        types.Part.from_function_response(
+                            name=fc.name,
+                            response={"result": result_text},
+                        )
+                    )
+                contents.append(types.Content(role="tool", parts=response_parts))
+
+            # Didn't converge on its own -- ask again with a clean, tool-free
+            # turn so the API can't keep echoing prior function calls.
+            summary_prompt = (
+                f"Original question: {user_prompt}\n\n"
+                "You already ran these ClickHouse queries and got these results:\n\n"
+                + "\n\n".join(evidence_log)
+                + "\n\nBased only on this data, give your final answer now: name the "
+                "exact episode and timestamp range where drop-off spikes, cite the "
+                "numbers, and give one concrete recommendation for editorial."
+            )
+            final_response = await client.aio.models.generate_content(
                 model=MODEL,
-                contents=user_prompt,
+                contents=summary_prompt,
                 config=types.GenerateContentConfig(
                     system_instruction=SYSTEM_INSTRUCTION,
-                    tools=[session, code_execution_tool],
                     temperature=0,
                 ),
             )
-            return response.text
+            return final_response.text
 
 
 if __name__ == "__main__":
