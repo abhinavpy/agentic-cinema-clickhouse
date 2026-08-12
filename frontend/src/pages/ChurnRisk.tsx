@@ -5,6 +5,7 @@ import ChartCard from "../components/ChartCard";
 import RiskBadge from "../components/RiskBadge";
 import SimpleBarChart from "../charts/SimpleBarChart";
 import LoadingBox from "../components/LoadingBox";
+import SectionDivider from "../components/SectionDivider";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import {
   Table,
@@ -52,10 +53,15 @@ function ChurnRisk() {
     : [];
 
   return (
-    <div className="max-w-6xl px-10 py-8">
+    <div className="mx-auto max-w-6xl px-10 py-10">
       <header>
-        <h1 className="text-2xl font-semibold">Churn Risk</h1>
-        <p className="mt-1.5 text-sm text-muted-foreground">
+        <div className="font-sans text-[11px] font-bold tracking-[0.2em] text-ox uppercase">
+          Retention risk
+        </div>
+        <h1 className="mt-3 font-serif text-[34px] leading-tight font-medium tracking-tight text-ink">
+          Churn Risk
+        </h1>
+        <p className="mt-2.5 max-w-[560px] text-[14px] leading-relaxed text-ink2">
           Per-viewer risk of abandoning the series, scored relative to your audience -- not fixed
           thresholds. See <code>architecture.md</code> for the methodology.
         </p>
@@ -63,7 +69,8 @@ function ChurnRisk() {
 
       {error && <div className="mt-6 text-sm text-destructive">Couldn't load churn risk: {error}</div>}
 
-      <div className="mt-6 grid grid-cols-4 gap-3.5 max-md:grid-cols-2">
+      <SectionDivider label="Risk posture" note="scored per viewer" />
+      <div className="grid grid-cols-4 gap-3.5 max-md:grid-cols-2">
         {data ? (
           <>
             <StatTile label="Viewers Analyzed" value={data.total_viewers.toLocaleString()} />
@@ -72,6 +79,7 @@ function ChurnRisk() {
               value={data.bucket_counts.critical.toLocaleString()}
               sublabel={`${((data.bucket_counts.critical / data.total_viewers) * 100).toFixed(1)}% of audience`}
               tone="critical"
+              accent
             />
             <StatTile
               label="Serious Risk"

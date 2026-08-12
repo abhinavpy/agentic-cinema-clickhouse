@@ -25,7 +25,7 @@ function CustomTooltip({ active, payload, label, valueLabel, swatchColor }: any)
 }
 
 function SimpleBarChart({ data, categoryKey, valueKey, valueLabel, highlightIndex, colors }: SimpleBarChartProps) {
-  const colorFor = (i: number) => colors?.[i] ?? (i === highlightIndex ? "var(--status-critical)" : "var(--series-1)");
+  const colorFor = (i: number) => colors?.[i] ?? (i === highlightIndex ? "var(--status-critical)" : "var(--series-4)");
 
   return (
     <ResponsiveContainer width="100%" height={280}>
@@ -34,13 +34,13 @@ function SimpleBarChart({ data, categoryKey, valueKey, valueLabel, highlightInde
         <XAxis
           dataKey={categoryKey}
           stroke="var(--axis)"
-          tick={{ fill: "var(--text-muted)", fontSize: 12 }}
+          tick={{ fill: "var(--text-muted)", fontSize: 11, fontFamily: "var(--font-mono)" }}
           tickLine={false}
           axisLine={{ stroke: "var(--axis)" }}
         />
         <YAxis
           stroke="var(--axis)"
-          tick={{ fill: "var(--text-muted)", fontSize: 12 }}
+          tick={{ fill: "var(--text-muted)", fontSize: 11, fontFamily: "var(--font-mono)" }}
           tickLine={false}
           axisLine={false}
           width={52}
@@ -55,7 +55,7 @@ function SimpleBarChart({ data, categoryKey, valueKey, valueLabel, highlightInde
           }}
           cursor={{ fill: "var(--gridline)" }}
         />
-        <Bar dataKey={valueKey} radius={[4, 4, 0, 0]} maxBarSize={56} isAnimationActive={false}>
+        <Bar dataKey={valueKey} radius={[2, 2, 0, 0]} maxBarSize={56} isAnimationActive={false}>
           {data.map((_, i) => (
             <Cell key={i} fill={colorFor(i)} />
           ))}

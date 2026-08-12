@@ -72,28 +72,28 @@ function RetentionChart({ curves }: { curves: RetentionCurve[] }) {
         <XAxis
           dataKey="minute"
           stroke="var(--axis)"
-          tick={{ fill: "var(--text-muted)", fontSize: 12 }}
+          tick={{ fill: "var(--text-muted)", fontSize: 11, fontFamily: "var(--font-mono)" }}
           tickLine={false}
           axisLine={{ stroke: "var(--axis)" }}
-          label={{ value: "Minutes into episode", position: "insideBottom", offset: -2, fontSize: 12, fill: "var(--text-muted)" }}
+          label={{ value: "Minutes into episode", position: "insideBottom", offset: -2, fontSize: 10.5, fontFamily: "var(--font-sans)", fill: "var(--text-muted)" }}
         />
         <YAxis
           domain={[0, 100]}
           tickFormatter={(v) => `${v}%`}
           stroke="var(--axis)"
-          tick={{ fill: "var(--text-muted)", fontSize: 12 }}
+          tick={{ fill: "var(--text-muted)", fontSize: 11, fontFamily: "var(--font-mono)" }}
           tickLine={false}
           axisLine={false}
         />
         <Tooltip content={<CustomTooltip />} />
         <Legend
           formatter={(value: string) => (
-            <span style={{ color: "var(--text-secondary)", fontSize: 12 }}>
+            <span style={{ color: "var(--text-secondary)", fontSize: 11, fontFamily: "var(--font-mono)" }}>
               Episode {value.replace("ep", "")}
             </span>
           )}
           iconType="plainline"
-          wrapperStyle={{ fontSize: 12 }}
+          wrapperStyle={{ fontSize: 11 }}
         />
         {episodeIds.map((id, i) => (
           <Line

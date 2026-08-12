@@ -1,182 +1,104 @@
 @import "tailwindcss";
 @import "tw-animate-css";
 @import "shadcn/tailwind.css";
-@import "@fontsource-variable/geist";
 @plugin "@tailwindcss/typography";
 
-@custom-variant dark (&:is(.dark *));
+/* ══════════════════════════════════════════════════════════════════════
+   Design system ported from compliance-os's "Statute": warm paper canvas,
+   ink text, Spectral serif for headings/numbers, Archivo (uppercase,
+   letter-spaced) for UI chrome, JetBrains Mono for stats/citations, hairline
+   rules instead of shadows, oxblood/olive/ochre/slate status accents.
+   Light-only by design (the reference has no dark mode).
+   ══════════════════════════════════════════════════════════════════════ */
 
 :root {
   color-scheme: light;
 
-  --background: oklch(1 0 0);
-  --foreground: oklch(0.145 0 0);
-  --card: oklch(1 0 0);
-  --card-foreground: oklch(0.145 0 0);
-  --popover: oklch(1 0 0);
-  --popover-foreground: oklch(0.145 0 0);
-  /* Primary = our validated brand blue (dataviz categorical slot 1) */
-  --primary: #2a78d6;
-  --primary-foreground: oklch(0.985 0 0);
-  --secondary: oklch(0.97 0 0);
-  --secondary-foreground: oklch(0.205 0 0);
-  --muted: oklch(0.97 0 0);
-  --muted-foreground: oklch(0.556 0 0);
-  --accent: oklch(0.97 0 0);
-  --accent-foreground: oklch(0.205 0 0);
-  /* Destructive aligned with our validated status-critical */
-  --destructive: #d03b3b;
-  --border: oklch(0.922 0 0);
-  --input: oklch(0.922 0 0);
-  --ring: #2a78d6;
-  --radius: 0.65rem;
-  --sidebar: oklch(0.985 0 0);
-  --sidebar-foreground: oklch(0.145 0 0);
-  --sidebar-primary: #2a78d6;
-  --sidebar-primary-foreground: oklch(0.985 0 0);
-  --sidebar-accent: oklch(0.97 0 0);
-  --sidebar-accent-foreground: oklch(0.205 0 0);
-  --sidebar-border: oklch(0.922 0 0);
-  --sidebar-ring: #2a78d6;
+  /* -- Statute palette (matches compliance-os naming 1:1) -- */
+  --paper: #f4f1ea; /* canvas */
+  --paper2: #fbfaf5; /* cards / raised */
+  --paper3: #efebe1; /* sunken / wells */
+  --ink: #1c1a15;
+  --ink2: #6e665a;
+  --ink3: #a39b8b;
+  --rule: #d9d3c5;
+  --rule2: #e7e1d5;
 
-  /* -- Custom tokens beyond shadcn's set -- validated dataviz palette,
-     see dataviz skill references/palette.md. Not shadcn names, so no
-     collision with the semantic tokens above. */
-  --text-secondary: #52514e;
-  --text-muted: #898781;
-  --gridline: #e1e0d9;
-  --axis: #c3c2b7;
-  --success-text: #006300;
+  --ox: #9e2b25; /* oxblood -- brand accent / critical */
+  --ox2: #7e211c;
+  --ox-soft: #f6ece6;
+  --ox-bd: #e3c9be;
 
-  /* Categorical series, fixed order -- never cycled/reassigned */
-  --series-1: #2a78d6; /* blue */
-  --series-2: #eb6834; /* orange */
-  --series-3: #1baf7a; /* aqua */
-  --series-4: #eda100; /* yellow */
-  --series-5: #e87ba4; /* magenta */
-  --series-6: #008300; /* green */
-  --series-7: #4a3aa7; /* violet */
-  --series-8: #e34948; /* red */
+  --olive: #4f6048; /* verified / good / resolved */
+  --olive2: #3e4d38;
+  --olive-soft: #ebeee3;
+  --olive-bd: #cbd3bc;
 
-  /* Status (fixed, never themed) */
-  --status-good: #0ca30c;
-  --status-warning: #fab219;
-  --status-serious: #ec835a;
-  --status-critical: #d03b3b;
+  --ochre: #946017; /* caution / serious */
+  --ochre-soft: #f4ecda;
+  --ochre-bd: #e4d2a9;
 
-  /* shadcn's chart-N slots reuse the same validated series colors */
-  --chart-1: var(--series-1);
-  --chart-2: var(--series-2);
-  --chart-3: var(--series-3);
-  --chart-4: var(--series-4);
-  --chart-5: var(--series-5);
-  --chart-6: var(--series-6);
-  --chart-7: var(--series-7);
-  --chart-8: var(--series-8);
-}
+  --slate: #3c4e63; /* informational / in-review (cool) */
+  --slate-soft: #e9edf1;
+  --slate-bd: #c5d0db;
 
-/* OS dark-mode preference. There's no manual toggle yet, so this applies
-   directly to :root (not gated behind a .dark class); the .dark class
-   below carries the same values for when a toggle is added later. */
-@media (prefers-color-scheme: dark) {
-  :root {
-    color-scheme: dark;
+  --shadow: 0 1px 2px rgba(40, 30, 15, 0.05), 0 8px 24px rgba(40, 30, 15, 0.05);
+  --shadow-lg: 0 24px 70px rgba(28, 20, 10, 0.2), 0 6px 18px rgba(28, 20, 10, 0.1);
 
-    --background: oklch(0.145 0 0);
-    --foreground: oklch(0.985 0 0);
-    --card: oklch(0.205 0 0);
-    --card-foreground: oklch(0.985 0 0);
-    --popover: oklch(0.205 0 0);
-    --popover-foreground: oklch(0.985 0 0);
-    --primary: #3987e5;
-    --primary-foreground: oklch(0.985 0 0);
-    --secondary: oklch(0.269 0 0);
-    --secondary-foreground: oklch(0.985 0 0);
-    --muted: oklch(0.269 0 0);
-    --muted-foreground: oklch(0.708 0 0);
-    --accent: oklch(0.269 0 0);
-    --accent-foreground: oklch(0.985 0 0);
-    --destructive: #e66767;
-    --border: oklch(1 0 0 / 10%);
-    --input: oklch(1 0 0 / 15%);
-    --ring: #3987e5;
-    --sidebar: oklch(0.205 0 0);
-    --sidebar-foreground: oklch(0.985 0 0);
-    --sidebar-primary: #3987e5;
-    --sidebar-primary-foreground: oklch(0.985 0 0);
-    --sidebar-accent: oklch(0.269 0 0);
-    --sidebar-accent-foreground: oklch(0.985 0 0);
-    --sidebar-border: oklch(1 0 0 / 10%);
-    --sidebar-ring: #3987e5;
+  /* -- shadcn semantic tokens, remapped onto the palette above -- */
+  --background: var(--paper);
+  --foreground: var(--ink);
+  --card: var(--paper2);
+  --card-foreground: var(--ink);
+  --popover: var(--paper2);
+  --popover-foreground: var(--ink);
+  --primary: var(--ink);
+  --primary-foreground: var(--paper);
+  --secondary: var(--paper3);
+  --secondary-foreground: var(--ink);
+  --muted: var(--paper3);
+  --muted-foreground: var(--ink2);
+  --accent: var(--paper3);
+  --accent-foreground: var(--ink);
+  --destructive: var(--ox);
+  --border: var(--rule);
+  --input: var(--rule);
+  --ring: var(--ox);
+  --radius: 0.1875rem; /* 3px -- sharp, editorial corners, not rounded-xl */
+  --sidebar: var(--paper2);
+  --sidebar-foreground: var(--ink);
+  --sidebar-primary: var(--ink);
+  --sidebar-primary-foreground: var(--paper);
+  --sidebar-accent: var(--paper3);
+  --sidebar-accent-foreground: var(--ink);
+  --sidebar-border: var(--rule);
+  --sidebar-ring: var(--ox);
 
-    --text-secondary: #c3c2b7;
-    --text-muted: #898781;
-    --gridline: #2c2c2a;
-    --axis: #383835;
-    --success-text: #0ca30c;
+  /* -- Custom tokens beyond shadcn's set -- */
+  --text-secondary: var(--ink2);
+  --text-muted: var(--ink3);
+  --gridline: var(--rule2);
+  --axis: var(--rule);
+  --success-text: var(--olive);
 
-    --series-1: #3987e5;
-    --series-2: #d95926;
-    --series-3: #199e70;
-    --series-4: #c98500;
-    --series-5: #d55181;
-    --series-6: #008300;
-    --series-7: #9085e9;
-    --series-8: #e66767;
+  /* Categorical chart series -- validated against paper2 with the dataviz
+     skill's palette validator (all CVD/contrast/lightness checks pass);
+     same warm/editorial hue family as the status accents, but with enough
+     chroma/lightness spread to work as an adjacent-comparison chart
+     palette, which the 4 status colors alone are not. Fixed order. */
+  --series-1: #a6362e; /* brick */
+  --series-2: #0c8c7e; /* teal */
+  --series-3: #c17a0a; /* amber */
+  --series-4: #2a63a8; /* steel blue */
+  --series-5: #3d8138; /* forest */
+  --series-6: #9a4480; /* plum */
 
-    --chart-1: var(--series-1);
-    --chart-2: var(--series-2);
-    --chart-3: var(--series-3);
-    --chart-4: var(--series-4);
-    --chart-5: var(--series-5);
-    --chart-6: var(--series-6);
-    --chart-7: var(--series-7);
-    --chart-8: var(--series-8);
-  }
-}
-
-.dark {
-  --background: oklch(0.145 0 0);
-  --foreground: oklch(0.985 0 0);
-  --card: oklch(0.205 0 0);
-  --card-foreground: oklch(0.985 0 0);
-  --popover: oklch(0.205 0 0);
-  --popover-foreground: oklch(0.985 0 0);
-  --primary: #3987e5;
-  --primary-foreground: oklch(0.985 0 0);
-  --secondary: oklch(0.269 0 0);
-  --secondary-foreground: oklch(0.985 0 0);
-  --muted: oklch(0.269 0 0);
-  --muted-foreground: oklch(0.708 0 0);
-  --accent: oklch(0.269 0 0);
-  --accent-foreground: oklch(0.985 0 0);
-  --destructive: #e66767;
-  --border: oklch(1 0 0 / 10%);
-  --input: oklch(1 0 0 / 15%);
-  --ring: #3987e5;
-  --sidebar: oklch(0.205 0 0);
-  --sidebar-foreground: oklch(0.985 0 0);
-  --sidebar-primary: #3987e5;
-  --sidebar-primary-foreground: oklch(0.985 0 0);
-  --sidebar-accent: oklch(0.269 0 0);
-  --sidebar-accent-foreground: oklch(0.985 0 0);
-  --sidebar-border: oklch(1 0 0 / 10%);
-  --sidebar-ring: #3987e5;
-
-  --text-secondary: #c3c2b7;
-  --text-muted: #898781;
-  --gridline: #2c2c2a;
-  --axis: #383835;
-  --success-text: #0ca30c;
-
-  --series-1: #3987e5;
-  --series-2: #d95926;
-  --series-3: #199e70;
-  --series-4: #c98500;
-  --series-5: #d55181;
-  --series-6: #008300;
-  --series-7: #9085e9;
-  --series-8: #e66767;
+  /* Status (fixed, never themed) -- mirrors compliance-os's severity
+     mapping: CRITICAL=ox, HIGH=ochre, MEDIUM=slate, resolved/good=olive */
+  --status-critical: var(--ox);
+  --status-serious: var(--ochre);
+  --status-warning: var(--slate);
+  --status-good: var(--olive);
 
   --chart-1: var(--series-1);
   --chart-2: var(--series-2);
@@ -184,13 +106,38 @@
   --chart-4: var(--series-4);
   --chart-5: var(--series-5);
   --chart-6: var(--series-6);
-  --chart-7: var(--series-7);
-  --chart-8: var(--series-8);
 }
 
 @theme inline {
-  --font-heading: var(--font-sans);
-  --font-sans: 'Geist Variable', sans-serif;
+  --font-heading: var(--font-serif);
+  --font-serif: 'Spectral', Georgia, 'Times New Roman', serif;
+  --font-sans: 'Archivo', system-ui, sans-serif;
+  --font-mono: 'JetBrains Mono', ui-monospace, monospace;
+
+  /* Statute palette as Tailwind utilities (bg-ink, text-ox, border-rule, …) */
+  --color-paper: var(--paper);
+  --color-paper2: var(--paper2);
+  --color-paper3: var(--paper3);
+  --color-ink: var(--ink);
+  --color-ink2: var(--ink2);
+  --color-ink3: var(--ink3);
+  --color-rule: var(--rule);
+  --color-rule2: var(--rule2);
+  --color-ox: var(--ox);
+  --color-ox2: var(--ox2);
+  --color-ox-soft: var(--ox-soft);
+  --color-ox-bd: var(--ox-bd);
+  --color-olive: var(--olive);
+  --color-olive2: var(--olive2);
+  --color-olive-soft: var(--olive-soft);
+  --color-olive-bd: var(--olive-bd);
+  --color-ochre: var(--ochre);
+  --color-ochre-soft: var(--ochre-soft);
+  --color-ochre-bd: var(--ochre-bd);
+  --color-slate: var(--slate);
+  --color-slate-soft: var(--slate-soft);
+  --color-slate-bd: var(--slate-bd);
+
   --color-sidebar-ring: var(--sidebar-ring);
   --color-sidebar-border: var(--sidebar-border);
   --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
@@ -199,6 +146,7 @@
   --color-sidebar-primary: var(--sidebar-primary);
   --color-sidebar-foreground: var(--sidebar-foreground);
   --color-sidebar: var(--sidebar);
+  --color-chart-6: var(--chart-6);
   --color-chart-5: var(--chart-5);
   --color-chart-4: var(--chart-4);
   --color-chart-3: var(--chart-3);
@@ -236,17 +184,23 @@
     @apply border-border outline-ring/50;
   }
   body {
-    @apply bg-background text-foreground;
+    @apply bg-background text-foreground font-serif;
+    -webkit-font-smoothing: antialiased;
+    text-rendering: optimizeLegibility;
   }
   html {
-    @apply font-sans;
+    @apply font-serif;
+  }
+  ::selection {
+    background: var(--ox-soft);
+    color: var(--ox2);
   }
 }
 
 code,
 pre {
-  font-family: ui-monospace, Consolas, monospace;
-  background: var(--card);
+  font-family: var(--font-mono);
+  background: var(--paper3);
   border-radius: 4px;
 }
 
@@ -268,16 +222,17 @@ pre code {
 .chart-tooltip {
   background: var(--card);
   border: 1px solid var(--border);
-  border-radius: 0.5rem;
+  border-radius: var(--radius);
   padding: 0.55rem 0.7rem;
   font-size: 0.8rem;
-  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.12);
+  box-shadow: var(--shadow);
 }
 
 .chart-tooltip-title {
   font-weight: 600;
   margin-bottom: 0.3rem;
   color: var(--foreground);
+  font-family: var(--font-serif);
 }
 
 .chart-tooltip-row {
@@ -286,6 +241,8 @@ pre code {
   gap: 0.4rem;
   color: var(--text-secondary);
   white-space: nowrap;
+  font-family: var(--font-mono);
+  font-size: 0.75rem;
 }
 
 .chart-tooltip .swatch {
@@ -293,4 +250,13 @@ pre code {
   height: 8px;
   border-radius: 2px;
   display: inline-block;
+}
+
+/* uppercase, letter-spaced label -- the Archivo "UI chrome" treatment used
+   throughout for nav, buttons, stat labels, tags */
+.lbl {
+  font-family: var(--font-sans);
+  text-transform: uppercase;
+  letter-spacing: 0.14em;
+  font-weight: 600;
 }

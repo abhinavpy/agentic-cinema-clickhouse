@@ -10,6 +10,7 @@ import {
 import StatTile from "../components/StatTile";
 import ChartCard from "../components/ChartCard";
 import LoadingBox from "../components/LoadingBox";
+import SectionDivider from "../components/SectionDivider";
 import RetentionChart from "../charts/RetentionChart";
 import SimpleBarChart from "../charts/SimpleBarChart";
 
@@ -43,10 +44,15 @@ function Dashboard() {
     : undefined;
 
   return (
-    <div className="max-w-6xl px-10 py-8">
+    <div className="mx-auto max-w-6xl px-10 py-10">
       <header>
-        <h1 className="text-2xl font-semibold">Audience Overview</h1>
-        <p className="mt-1.5 text-sm text-muted-foreground">
+        <div className="font-sans text-[11px] font-bold tracking-[0.2em] text-ox uppercase">
+          Audience analytics
+        </div>
+        <h1 className="mt-3 font-serif text-[34px] leading-tight font-medium tracking-tight text-ink">
+          Audience Overview
+        </h1>
+        <p className="mt-2.5 max-w-[560px] text-[14px] leading-relaxed text-ink2">
           Live metrics for <code>nebula-heist</code>, sourced directly from ClickHouse Cloud.
         </p>
       </header>
@@ -55,10 +61,11 @@ function Dashboard() {
         <div className="mt-6 text-sm text-destructive">Couldn't load metrics: {overview.error}</div>
       )}
 
-      <div className="mt-6 grid grid-cols-4 gap-3.5 max-md:grid-cols-2">
+      <SectionDivider label="Audience posture" note="as of last sync" />
+      <div className="grid grid-cols-4 gap-3.5 max-md:grid-cols-2">
         {overview.data ? (
           <>
-            <StatTile label="Total Viewers" value={overview.data.total_viewers.toLocaleString()} />
+            <StatTile label="Total Viewers" value={overview.data.total_viewers.toLocaleString()} accent />
             <StatTile label="Total Sessions" value={overview.data.total_sessions.toLocaleString()} />
             <StatTile
               label="Completion Rate"
@@ -76,7 +83,8 @@ function Dashboard() {
         )}
       </div>
 
-      <div className="mt-5 grid grid-cols-2 gap-4 max-md:grid-cols-1">
+      <SectionDivider label="Engagement charts" />
+      <div className="grid grid-cols-2 gap-4 max-md:grid-cols-1">
         <ChartCard
           title="Viewer Retention by Episode"
           subtitle="% of session still watching at each point in the episode"

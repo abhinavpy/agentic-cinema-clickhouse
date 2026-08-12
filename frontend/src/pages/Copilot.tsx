@@ -46,20 +46,16 @@ function Copilot() {
   }
 
   return (
-    <div className="flex h-screen max-w-3xl flex-col px-10 py-8">
-      <header className="shrink-0">
-        <h1 className="text-2xl font-semibold">🎬 Copilot</h1>
-        <p className="mt-1.5 text-sm text-muted-foreground">
-          Ask anything about audience behavior — grounded in ClickHouse Cloud + Gemini
+    <div className="mx-auto flex h-[calc(100vh-57px)] max-w-3xl flex-col px-8 py-7">
+      <header className="shrink-0 border-b border-rule pb-5">
+        <div className="eyebrow font-sans text-[11px] font-bold tracking-[0.2em] text-ox uppercase">Copilot</div>
+        <h1 className="font-serif text-[26px] font-medium tracking-tight text-ink">Ask about your audience</h1>
+        <p className="mt-1.5 text-[13.5px] text-ink2">
+          Grounded in ClickHouse Cloud + Gemini — try <em>"{EXAMPLE_QUESTION}"</em>
         </p>
       </header>
 
-      <main className="flex-1 space-y-4 overflow-y-auto py-5">
-        {messages.length === 0 && (
-          <div className="text-sm text-muted-foreground">
-            Try: <em>"{EXAMPLE_QUESTION}"</em>
-          </div>
-        )}
+      <main className="flex-1 space-y-5 overflow-y-auto py-6">
         {messages.map((m, i) => (
           <ChatBubble key={i} role={m.role}>
             <ReactMarkdown remarkPlugins={[remarkGfm]}>{m.content}</ReactMarkdown>
@@ -68,7 +64,7 @@ function Copilot() {
 
         {loading && (
           <ChatBubble role="assistant">
-            <div className="flex items-center gap-2.5 text-muted-foreground">
+            <div className="flex items-center gap-2.5 text-ink2">
               <Spinner className="size-4" />
               Querying ClickHouse and analyzing...
             </div>
@@ -79,14 +75,14 @@ function Copilot() {
         <div ref={bottomRef} />
       </main>
 
-      <form className="flex shrink-0 gap-2.5 pb-2" onSubmit={handleSubmit}>
+      <form className="flex shrink-0 gap-2.5 border-t border-rule pt-5" onSubmit={handleSubmit}>
         <Input
           value={input}
           onChange={(e) => setInput(e.target.value)}
           placeholder={`Ask about audience behavior, e.g. '${EXAMPLE_QUESTION}'`}
           disabled={loading}
         />
-        <Button type="submit" disabled={loading || !input.trim()} size="icon" aria-label="Send">
+        <Button type="submit" disabled={loading || !input.trim()} size="icon" aria-label="Send" className="rounded-full">
           ↑
         </Button>
       </form>
@@ -95,16 +91,22 @@ function Copilot() {
 }
 
 function ChatBubble({ role, children }: { role: "user" | "assistant"; children: React.ReactNode }) {
+  const isUser = role === "user";
   return (
-    <div className="flex items-start gap-3">
-      <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border border-border bg-card text-[1.1rem]">
-        {role === "user" ? "🎥" : "🤖"}
-      </span>
+    <div className={cn("flex flex-col", isUser && "items-end")}>
+      <div className="mb-1.5 font-sans text-[9px] font-bold tracking-[0.16em] uppercase" style={{ color: isUser ? "var(--ink3)" : "var(--ox)" }}>
+        {isUser ? "You" : "Copilot"}
+      </div>
       <div
         className={cn(
-          "prose prose-sm dark:prose-invert max-w-none overflow-x-auto rounded-xl border border-border bg-card px-4.5 py-3.5 leading-relaxed",
-          "prose-headings:mt-0 prose-p:my-2 first:prose-p:mt-0 last:prose-p:mb-0",
-          "prose-table:my-3 prose-th:text-left"
+          "prose prose-sm max-w-[92%] text-[13.5px] leading-relaxed",
+          "prose-headings:font-serif prose-headings:mt-0 prose-p:my-2 first:prose-p:mt-0 last:prose-p:mb-0",
+          "prose-table:my-3 prose-th:text-left prose-strong:text-ink",
+          "prose-code:rounded-[3px] prose-code:bg-paper3 prose-code:text-ink prose-code:before:content-none prose-code:after:content-none",
+          "prose-pre:border prose-pre:border-rule2 prose-pre:bg-paper3 prose-pre:text-ink",
+          isUser
+            ? "border-r-2 border-ink pr-3.5 text-right text-ink2 italic"
+            : "border-l-2 border-ox pl-3.5 text-ink"
         )}
       >
         {children}
