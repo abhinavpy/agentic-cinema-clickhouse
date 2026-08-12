@@ -9,7 +9,7 @@ import {
 } from "../api";
 import StatTile from "../components/StatTile";
 import ChartCard from "../components/ChartCard";
-import { Skeleton } from "@/components/ui/skeleton";
+import LoadingBox from "../components/LoadingBox";
 import RetentionChart from "../charts/RetentionChart";
 import SimpleBarChart from "../charts/SimpleBarChart";
 
@@ -72,7 +72,7 @@ function Dashboard() {
             />
           </>
         ) : (
-          Array.from({ length: 4 }).map((_, i) => <Skeleton key={i} className="h-[88px] rounded-xl" />)
+          Array.from({ length: 4 }).map((_, i) => <LoadingBox key={i} className="h-[88px]" />)
         )}
       </div>
 
@@ -135,7 +135,7 @@ function Dashboard() {
 
 function ChartPlaceholder({ error }: { error?: string | null }) {
   if (error) return <div className="flex h-[280px] items-center justify-center text-sm text-destructive">{error}</div>;
-  return <Skeleton className="h-[280px]" />;
+  return <LoadingBox className="h-[280px] border-0" />;
 }
 
 export default Dashboard;

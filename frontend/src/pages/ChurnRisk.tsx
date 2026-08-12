@@ -4,8 +4,8 @@ import StatTile from "../components/StatTile";
 import ChartCard from "../components/ChartCard";
 import RiskBadge from "../components/RiskBadge";
 import SimpleBarChart from "../charts/SimpleBarChart";
+import LoadingBox from "../components/LoadingBox";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Skeleton } from "@/components/ui/skeleton";
 import {
   Table,
   TableBody,
@@ -87,7 +87,7 @@ function ChurnRisk() {
             />
           </>
         ) : (
-          Array.from({ length: 4 }).map((_, i) => <Skeleton key={i} className="h-[88px] rounded-xl" />)
+          Array.from({ length: 4 }).map((_, i) => <LoadingBox key={i} className="h-[88px]" />)
         )}
       </div>
 
@@ -102,7 +102,7 @@ function ChurnRisk() {
               colors={BUCKET_ORDER.map((b) => BUCKET_COLOR[b])}
             />
           ) : (
-            <Skeleton className="h-[280px]" />
+            <LoadingBox className="h-[280px] border-0" />
           )}
         </ChartCard>
       </div>
@@ -145,7 +145,7 @@ function ChurnRisk() {
               </TableBody>
             </Table>
           ) : (
-            <Skeleton className="h-[400px]" />
+            <LoadingBox className="h-[400px] border-0" />
           )}
         </CardContent>
       </Card>

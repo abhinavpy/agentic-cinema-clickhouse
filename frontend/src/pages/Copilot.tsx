@@ -4,6 +4,7 @@ import remarkGfm from "remark-gfm";
 import { api } from "../api";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Spinner } from "@/components/ui/spinner";
 import { cn } from "@/lib/utils";
 
 interface ChatMessage {
@@ -68,7 +69,7 @@ function Copilot() {
         {loading && (
           <ChatBubble role="assistant">
             <div className="flex items-center gap-2.5 text-muted-foreground">
-              <span className="h-4 w-4 animate-spin rounded-full border-2 border-border border-t-muted-foreground" />
+              <Spinner className="size-4" />
               Querying ClickHouse and analyzing...
             </div>
           </ChatBubble>
